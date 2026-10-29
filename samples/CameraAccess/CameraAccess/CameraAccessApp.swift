@@ -19,13 +19,13 @@ import Foundation
 import MWDATCore
 import SwiftUI
 
-#if DEBUG
+#if DEBUG && canImport(MWDATMockDevice)
 import MWDATMockDevice
 #endif
 
 @main
 struct CameraAccessApp: App {
-  #if DEBUG
+  #if DEBUG && canImport(MWDATMockDevice)
   // Debug menu for simulating device connections during development. The
   // ladybug button toggles `showDebugMenu`; the sheet hosts the mock device kit.
   @State private var showDebugMenu = false
@@ -47,6 +47,7 @@ struct CameraAccessApp: App {
     // Start the test server when launched by XCUITests so tests can control
     // mock device setup via HTTP commands from the test process.
     if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+      #if canImport(MWDATMockDevice)
       MockDeviceKit.shared.enable(config: MockDeviceKitConfig(initiallyRegistered: false))
 
       let portFilePath = ProcessInfo.processInfo.environment["MWDAT_TEST_SERVER_PORT_FILE"]
@@ -57,6 +58,7 @@ struct CameraAccessApp: App {
           // pika27: errors are not propagated from this unstructured task
         }
       }
+      #endif
     }
     #endif
 
@@ -78,7 +80,7 @@ struct CameraAccessApp: App {
         } message: {
           Text(wearablesViewModel.errorMessage)
         }
-        #if DEBUG
+        #if DEBUG && canImport(MWDATMockDevice)
       .sheet(isPresented: $showDebugMenu) {
         MockDeviceKitView(viewModel: mockDeviceKitViewModel)
       }

@@ -204,6 +204,7 @@ final class CameraViewModel {
   /// `.starting` so the UI reflects the in-flight request immediately.
   func startSession() {
     guard !hasSession else { return }
+    print("[CameraAccess] ▶️ startSession() called")
     do throws(DeviceSessionError) {
       let session = try wearables.createSession(deviceSelector: deviceSelector)
       deviceSession = session
@@ -211,8 +212,10 @@ final class CameraViewModel {
       observeSession(session)
       // Reflect the in-flight request immediately; the observer drives it onward.
       sessionState = .starting
+      print("[CameraAccess] 🔄 session.start() called")
       try session.start()
     } catch {
+      print("[CameraAccess] ❌ startSession() failed: \(error)")
       handleSessionError(error)
       sessionState = .idle
       cleanupSession()
@@ -243,14 +246,20 @@ final class CameraViewModel {
       return
     }
     guard camera == nil else { return }
+    print("[CameraAccess] ▶️ startStreaming() called")
 
     do {
-      if try await wearables.checkPermissionStatus(.camera) == .granted {
+      let permissionStatus = try await wearables.checkPermissionStatus(.camera)
+      print("[CameraAccess] 📷 Camera permission status: \(permissionStatus)")
+      if permissionStatus == .granted {
+        print("[CameraAccess] ✅ Camera permission already granted — starting stream directly")
         beginStream(on: session)
       } else {
+        print("[CameraAccess] ⚠️ Camera permission not granted (\(permissionStatus)) — showing redirect confirm")
         showCameraPermissionRedirectConfirm = true
       }
     } catch {
+      print("[CameraAccess] ❌ checkPermissionStatus failed: \(error)")
       showError(error.localizedDescription)
     }
   }
@@ -277,28 +286,28 @@ final class CameraViewModel {
   /// must have ensured camera permission is granted first.
   private func beginStream(on session: DeviceSession) {
     guard camera == nil else { return }
-    // hvc1 (compressed HEVC) so frames can be written to file in passthrough mode.
-    // Glasses-mic (Bluetooth HFP) audio for sound-in-video is captured app-side by
-    // AudioCaptureHandler, so the SDK stream needs only the public video config (no audio codec).
+    print("[CameraAccess] ▶️ beginStream() called")
     let config = StreamConfiguration(
       videoCodec: VideoCodec.hvc1,
       resolution: StreamingResolution.low,
       frameRate: 24
     )
+    print("[CameraAccess] 📹 StreamConfiguration: codec=hvc1, resolution=low, frameRate=24")
 
     do {
-      // Add the consolidated `Camera` capability and stream through `camera.stream`.
       guard let newCamera = try session.addCamera(config: config) else {
+        print("[CameraAccess] ❌ addCamera() returned nil")
         showError("Couldn't create the camera. Try again.")
         return
       }
+      print("[CameraAccess] ✅ addCamera() succeeded — starting stream")
       camera = newCamera
-      // Subscribe before start() so no initial state transitions are missed.
       setupStreamListeners(for: newCamera.stream)
-      // Reflect the in-flight request immediately; the observer drives it onward.
       streamState = .starting
       newCamera.stream.start()
+      print("[CameraAccess] 🔄 stream.start() called")
     } catch {
+      print("[CameraAccess] ❌ beginStream() failed: \(error)")
       camera = nil
       showError(error.localizedDescription)
     }
@@ -406,6 +415,7 @@ final class CameraViewModel {
     deviceMonitorTask = Task { [weak self] in
       guard let self else { return }
       for await deviceId in deviceSelector.activeDeviceStream() {
+        print("[CameraAccess] 📡 Active device changed: \(deviceId?.description ?? "nil (no active device)")")
         hasActiveDevice = deviceId != nil
       }
     }
@@ -459,6 +469,7 @@ final class CameraViewModel {
   }
 
   private func handleSessionStateChange(_ state: DeviceSessionState) {
+    print("[CameraAccess] 🔔 Session state changed: \(state)")
     sessionState = state
     if state == .stopped {
       endBackgroundStopErrorSuppression()
@@ -467,12 +478,8 @@ final class CameraViewModel {
   }
 
   private func handleSessionError(_ error: DeviceSessionError) {
-    // Backgrounding the app intentionally ends the preview session; the SDK can
-    // still emit teardown errors while that stop converges, and surfacing those
-    // would show a false "something went wrong" alert on return.
+    print("[CameraAccess] ❌ Session error: \(error) — isStoppingForBackground=\(isStoppingForBackground)")
     guard !isStoppingForBackground else { return }
-    // All session errors surface through the single alert, including
-    // `datAppOnTheGlassesUpdateRequired`, which the SDK delivers as a one-shot event.
     showError(error.localizedDescription)
   }
 
@@ -531,10 +538,9 @@ final class CameraViewModel {
   }
 
   private func handleStreamStateChange(_ state: StreamState) {
+    print("[CameraAccess] 🔔 Stream state changed: \(state)")
     streamState = state
     if state == .stopped {
-      // Terminal — finalize any recording, then converge teardown. Covers both
-      // user-initiated stop and SDK auto-stop (disconnect, error, session end).
       Task { await stopVideoRecording() }
       clearStreamResources()
     }
@@ -561,8 +567,7 @@ final class CameraViewModel {
   }
 
   private func handleStreamError(_ error: StreamError) {
-    // Same bounded suppression window as `handleSessionError`: hide only the
-    // expected teardown noise from an intentional background-driven stop.
+    print("[CameraAccess] ❌ Stream error: \(error) — isStoppingForBackground=\(isStoppingForBackground)")
     guard !isStoppingForBackground else { return }
     showError(error.localizedDescription)
   }

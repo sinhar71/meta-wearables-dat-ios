@@ -136,6 +136,13 @@ struct MockDeviceCardView: View {
               }
             }
 
+            if viewModel.cameraSource == nil && !viewModel.hasCameraFeed {
+              Label("A camera source must be selected before connecting.", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             // Captured image control — hidden when a camera source (front/back) is selected
             if !isCameraSourceSelected {
               if viewModel.hasCapturedImage {

@@ -65,12 +65,23 @@ In the **Facebook app**:
 5. Enter your **contact email**
 6. Click **"Create App"**
 
-### 2.3 Add the Wearables/DAT SDK Product
+### 2.3 Register on the Wearables Developer Portal
+The Meta Wearables portal is **separate** from developers.facebook.com and is required for DAT SDK access:
+
+1. Go to **[wearables.developer.meta.com](https://wearables.developer.meta.com)**
+2. Log in with your Meta account (`sinhar71@gmail.com`)
+3. Register your app for **DAT SDK access**
+4. Request **Camera Access** permission specifically
+5. Download the latest **DAT SDK `.xcframework` files** from here
+
+> ℹ️ This portal and developers.facebook.com are linked under the same Meta developer account. Your `META_APP_ID` and `CLIENT_TOKEN` from developers.facebook.com work across both portals.
+
+### 2.4 Add the Wearables/DAT SDK Product on developers.facebook.com
 1. In your app dashboard, click **"Add Product"**
 2. Find and add **"Wearables API"** or **"DAT SDK"**
 3. Follow the setup wizard
 
-### 2.4 Get Your Credentials
+### 2.5 Get Your Credentials
 Navigate to **Settings → Basic**:
 
 | Credential | Location | Used For |
@@ -150,10 +161,16 @@ These automatically add entries to your `.entitlements` file:
 ### 4.1 Signing & Capabilities
 | Setting | Value |
 |---|---|
-| Team | Your paid account (e.g. `Rajnish Sinha (Individual)`) |
+| Team | Your paid account — shows as `"Rajnish Sinha"` or `"Rajnish Sinha Team"` (Individual) |
 | Bundle Identifier | `com.yourname.AppName` (no "personal" in the ID) |
 | Provisioning Profile | Xcode Managed Profile |
 | Capabilities | Hotspot Configuration, Access WiFi Information |
+
+> ℹ️ **Team naming note:** Xcode may show your paid Individual account as either `"Rajnish Sinha"` or `"Rajnish Sinha Team"` — both refer to the same paid account. The key distinction from a free Personal Team is:
+> - **Personal Team** → Bundle ID contains `.personal.`, entitlements blocked
+> - **Paid Individual** → No `.personal.` in bundle ID, all entitlements available
+>
+> You can confirm you're on the paid account by going to **[developer.apple.com/account](https://developer.apple.com/account)** and verifying your membership shows **"Apple Developer Program"**.
 
 > ⚠️ If you previously used a Personal Team, the old bundle ID contains `.personal.` — change it to remove that segment to avoid duplicate app installs.
 
