@@ -19,18 +19,8 @@ import Foundation
 import MWDATCore
 import SwiftUI
 
-#if DEBUG && canImport(MWDATMockDevice)
-import MWDATMockDevice
-#endif
-
 @main
 struct SportsCoachApp: App {
-  #if DEBUG && canImport(MWDATMockDevice)
-  // Debug menu for simulating device connections during development. The
-  // ladybug button toggles `showDebugMenu`; the sheet hosts the mock device kit.
-  @State private var showDebugMenu = false
-  @State private var mockDeviceKitViewModel = MockDeviceKitViewModel(mockDeviceKit: MockDeviceKit.shared)
-  #endif
   private let wearables: WearablesInterface
   @State private var wearablesViewModel: WearablesViewModel
 
@@ -42,25 +32,6 @@ struct SportsCoachApp: App {
       NSLog("[SportsCoach] Failed to configure Wearables SDK: \(error)")
       #endif
     }
-
-    #if DEBUG
-    // Start the test server when launched by XCUITests so tests can control
-    // mock device setup via HTTP commands from the test process.
-    if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
-      #if canImport(MWDATMockDevice)
-      MockDeviceKit.shared.enable(config: MockDeviceKitConfig(initiallyRegistered: false))
-
-      let portFilePath = ProcessInfo.processInfo.environment["MWDAT_TEST_SERVER_PORT_FILE"]
-      Task {
-        do {
-          _ = try await MockDeviceKit.shared.startTestServer(portFilePath: portFilePath)
-        } catch {
-          // pika27: errors are not propagated from this unstructured task
-        }
-      }
-      #endif
-    }
-    #endif
 
     let wearables = Wearables.shared
     self.wearables = wearables
@@ -80,14 +51,6 @@ struct SportsCoachApp: App {
         } message: {
           Text(wearablesViewModel.errorMessage)
         }
-        #if DEBUG && canImport(MWDATMockDevice)
-      .sheet(isPresented: $showDebugMenu) {
-        MockDeviceKitView(viewModel: mockDeviceKitViewModel)
-      }
-      .overlay {
-        DebugMenuView(showDebugMenu: $showDebugMenu)
-      }
-        #endif
 
       // Registration view handles the flow for connecting to the glasses via Meta AI
       RegistrationView(viewModel: wearablesViewModel)
